@@ -71,7 +71,7 @@ module low_power_booth_multiplier (
             count <= 4'b0;
             product <= 16'b0;
             done <= 1'b0;
-            clk_enable <= 1'b0;
+            clk_enable <= 1'b1;  // Keep clock enabled after reset
             power_gate_enable <= 1'b0;
             activity_counter <= 8'b0;
             power_estimate <= 8'b0;
@@ -81,13 +81,13 @@ module low_power_booth_multiplier (
             
             case (state)
                 IDLE: begin
+                    done <= 1'b0;  // Clear done signal in IDLE
                     if (start) begin
                         A <= gated_multiplicand;
                         Q <= gated_multiplier;
                         M <= {gated_multiplicand[7], gated_multiplicand};
                         AQ <= 9'b0;
                         count <= 4'b0;
-                        clk_enable <= 1'b1;
                         power_gate_enable <= 1'b1;
                         activity_counter <= activity_counter + 1;
                     end
@@ -130,16 +130,11 @@ module low_power_booth_multiplier (
                     
                     count <= count + 1;
                     activity_counter <= activity_counter + 1;
-                    
-                    if (count == 4'b1000) begin
-                        next_state <= DONE;
-                    end
                 end
                 
                 DONE: begin
                     product <= {AQ[7:0], Q};
                     done <= 1'b1;
-                    clk_enable <= 1'b0;
                     power_gate_enable <= 1'b0;
                     power_consumption <= power_estimate;
                 end
@@ -149,11 +144,17 @@ module low_power_booth_multiplier (
     
     // Next state logic
     always @(*) begin
+        next_state = state;  // Default: stay in current state
         case (state)
-            IDLE: next_state = (start) ? COMPUTE : IDLE;
-            COMPUTE: next_state = (count == 4'b1000) ? DONE : COMPUTE;
-            DONE: next_state = IDLE;
-            default: next_state = IDLE;
+            IDLE: begin
+                if (start) next_state = COMPUTE;
+            end
+            COMPUTE: begin
+                if (count == 4'b0111) next_state = DONE;  // Change to check for 7 to transition on 8
+            end
+            DONE: begin
+                next_state = IDLE;
+            end
         endcase
     end
     
