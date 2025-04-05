@@ -208,6 +208,9 @@ module tb_low_power_booth_multiplier;
     end
     
     // Test stimulus
+    integer i;
+    reg test_done;
+    
     initial begin
         // Initialize
         reset = 1;
@@ -215,6 +218,7 @@ module tb_low_power_booth_multiplier;
         multiplicand = 8'b0;
         multiplier = 8'b0;
         power_mode = 2'b00;  // Start in normal power mode
+        test_done = 0;
         
         // Reset
         #20 reset = 0;
@@ -229,16 +233,19 @@ module tb_low_power_booth_multiplier;
         #10 start = 0;
         
         // Wait up to 100 cycles for done
-        repeat(100) begin
-            #10;
+        i = 0;
+        test_done = 0;
+        while (i < 100 && !test_done) begin
+            @(posedge clk);
             if (done) begin
                 $display("Test case 1 completed at time %t", $time);
                 $display("Product: %d, Expected: 15", product);
-                break;
+                test_done = 1;
             end
+            i = i + 1;
         end
         
-        if (!done)
+        if (!test_done)
             $display("ERROR: Test case 1 timed out without done signal at time %t", $time);
         
         #20;
@@ -252,16 +259,19 @@ module tb_low_power_booth_multiplier;
         #10 start = 0;
         
         // Wait up to 100 cycles for done
-        repeat(100) begin
-            #10;
+        i = 0;
+        test_done = 0;
+        while (i < 100 && !test_done) begin
+            @(posedge clk);
             if (done) begin
                 $display("Test case 2 completed at time %t", $time);
                 $display("Product: %d, Expected: -15", product);
-                break;
+                test_done = 1;
             end
+            i = i + 1;
         end
         
-        if (!done)
+        if (!test_done)
             $display("ERROR: Test case 2 timed out without done signal at time %t", $time);
         
         #20;
@@ -275,16 +285,19 @@ module tb_low_power_booth_multiplier;
         #10 start = 0;
         
         // Wait up to 100 cycles for done
-        repeat(100) begin
-            #10;
+        i = 0;
+        test_done = 0;
+        while (i < 100 && !test_done) begin
+            @(posedge clk);
             if (done) begin
                 $display("Test case 3 completed at time %t", $time);
                 $display("Product: %d, Expected: 15", product);
-                break;
+                test_done = 1;
             end
+            i = i + 1;
         end
         
-        if (!done)
+        if (!test_done)
             $display("ERROR: Test case 3 timed out without done signal at time %t", $time);
         
         #20;
