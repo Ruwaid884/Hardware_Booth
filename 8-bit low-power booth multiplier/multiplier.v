@@ -19,22 +19,10 @@ module low_power_booth_multiplier (
     reg [8:0] AQ;       // Accumulator
     reg [3:0] count;    // Counter for iterations
     
-    // Clock gating signals
-    wire gated_clk;
-    reg clk_enable;
-    
     // Power gating signals
     reg power_gate_enable;
     wire [7:0] gated_multiplicand;
     wire [7:0] gated_multiplier;
-    
-    // Clock gating cell (Vivado-specific)
-    (* DONT_TOUCH = "TRUE" *)
-    BUFGCE clk_gate (
-        .I(clk),
-        .CE(clk_enable),
-        .O(gated_clk)
-    );
     
     // Power gating for inputs
     assign gated_multiplicand = power_gate_enable ? multiplicand : 8'b0;
@@ -61,7 +49,7 @@ module low_power_booth_multiplier (
                               8'd20;                              // Ultra low power
     
     // State machine
-    always @(posedge gated_clk or posedge reset) begin
+    always @(posedge clk or posedge reset) begin
         if (reset) begin
             state <= IDLE;
             A <= 8'b0;
@@ -71,7 +59,6 @@ module low_power_booth_multiplier (
             count <= 4'b0;
             product <= 16'b0;
             done <= 1'b0;
-            clk_enable <= 1'b1;  // Keep clock enabled after reset
             power_gate_enable <= 1'b0;
             activity_counter <= 8'b0;
             power_estimate <= 8'b0;
@@ -83,9 +70,9 @@ module low_power_booth_multiplier (
                 IDLE: begin
                     done <= 1'b0;  // Clear done signal in IDLE
                     if (start) begin
-                        A <= gated_multiplicand;
-                        Q <= gated_multiplier;
-                        M <= {gated_multiplicand[7], gated_multiplicand};
+                        A <= multiplicand;
+                        Q <= multiplier;
+                        M <= {multiplicand[7], multiplicand};
                         AQ <= 9'b0;
                         count <= 4'b0;
                         power_gate_enable <= 1'b1;
@@ -159,7 +146,7 @@ module low_power_booth_multiplier (
     end
     
     // Power monitoring and control
-    always @(posedge gated_clk) begin
+    always @(posedge clk) begin
         if (reset) begin
             activity_counter <= 8'b0;
             power_estimate <= 8'b0;
@@ -174,14 +161,10 @@ module low_power_booth_multiplier (
         end
     end
     
-    // Vivado-specific power optimization attributes
-    (* DONT_TOUCH = "TRUE" *)
-    (* KEEP = "TRUE" *)
-    (* S = "TRUE" *)
-    (* MARK_DEBUG = "TRUE" *)
+    // Debug power register
     reg [7:0] debug_power;
     
-    always @(posedge gated_clk) begin
+    always @(posedge clk) begin
         debug_power <= power_estimate;
     end
     
@@ -212,6 +195,12 @@ module tb_low_power_booth_multiplier;
         .power_consumption(power_consumption)
     );
     
+    // Debug signals
+    wire [1:0] state;
+    wire [3:0] count;
+    assign state = uut.state;
+    assign count = uut.count;
+    
     // Clock generation
     initial begin
         clk = 0;
@@ -228,48 +217,85 @@ module tb_low_power_booth_multiplier;
         power_mode = 2'b00;  // Start in normal power mode
         
         // Reset
-        #10 reset = 0;
+        #20 reset = 0;
+        #10;
         
         // Test case 1: Normal power mode
-        #10 multiplicand = 8'd5;
+        $display("Starting Test case 1 at time %t", $time);
+        multiplicand = 8'd5;
         multiplier = 8'd3;
         power_mode = 2'b00;
         start = 1;
         #10 start = 0;
         
-        // Wait for completion
-        @(posedge done);
-        #10;
+        // Wait up to 100 cycles for done
+        repeat(100) begin
+            #10;
+            if (done) begin
+                $display("Test case 1 completed at time %t", $time);
+                $display("Product: %d, Expected: 15", product);
+                break;
+            end
+        end
+        
+        if (!done)
+            $display("ERROR: Test case 1 timed out without done signal at time %t", $time);
+        
+        #20;
         
         // Test case 2: Low power mode
-        #10 multiplicand = -8'd5;
+        $display("Starting Test case 2 at time %t", $time);
+        multiplicand = -8'd5;
         multiplier = 8'd3;
         power_mode = 2'b01;
         start = 1;
         #10 start = 0;
         
-        // Wait for completion
-        @(posedge done);
-        #10;
+        // Wait up to 100 cycles for done
+        repeat(100) begin
+            #10;
+            if (done) begin
+                $display("Test case 2 completed at time %t", $time);
+                $display("Product: %d, Expected: -15", product);
+                break;
+            end
+        end
+        
+        if (!done)
+            $display("ERROR: Test case 2 timed out without done signal at time %t", $time);
+        
+        #20;
         
         // Test case 3: Ultra low power mode
-        #10 multiplicand = -8'd5;
+        $display("Starting Test case 3 at time %t", $time);
+        multiplicand = -8'd5;
         multiplier = -8'd3;
         power_mode = 2'b10;
         start = 1;
         #10 start = 0;
         
-        // Wait for completion
-        @(posedge done);
-        #10;
+        // Wait up to 100 cycles for done
+        repeat(100) begin
+            #10;
+            if (done) begin
+                $display("Test case 3 completed at time %t", $time);
+                $display("Product: %d, Expected: 15", product);
+                break;
+            end
+        end
         
+        if (!done)
+            $display("ERROR: Test case 3 timed out without done signal at time %t", $time);
+        
+        #20;
+        
+        $display("Simulation complete at time %t", $time);
         $finish;
     end
     
-    // Monitor results
-    always @(posedge done) begin
-        $display("Time: %t, Mode: %b, Multiplicand: %d, Multiplier: %d, Product: %d, Power: %d", 
-                 $time, power_mode, multiplicand, multiplier, product, power_consumption);
+    // State monitor for debugging
+    always @(posedge clk) begin
+        $display("Time: %t, State: %d, Count: %d, Done: %b", $time, state, count, done);
     end
     
 endmodule 
