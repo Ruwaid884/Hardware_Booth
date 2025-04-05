@@ -26,8 +26,19 @@ module booth_array_16bit_optimized (
 
     // Modified Booth Encoding signals
     reg [16:0] booth_b;  // Extended by 1 bit
-    wire [7:0][2:0] booth_sel;  // Booth selection signals
-    reg [7:0][15:0] partial_products;  // 8 partial products instead of 16
+    wire [23:0] booth_sel;  // 8 groups of 3-bit selection signals
+    reg [127:0] partial_products_flat;  // 8 groups of 16-bit products flattened
+
+    // Easier access to individual partial products
+    wire [15:0] pp0, pp1, pp2, pp3, pp4, pp5, pp6, pp7;
+    assign pp0 = partial_products_flat[15:0];
+    assign pp1 = partial_products_flat[31:16];
+    assign pp2 = partial_products_flat[47:32];
+    assign pp3 = partial_products_flat[63:48];
+    assign pp4 = partial_products_flat[79:64];
+    assign pp5 = partial_products_flat[95:80];
+    assign pp6 = partial_products_flat[111:96];
+    assign pp7 = partial_products_flat[127:112];
 
     // Pipeline registers
     reg [15:0] a_pipe, b_pipe;
@@ -52,29 +63,31 @@ module booth_array_16bit_optimized (
         for (i = 0; i < 8; i = i + 1) begin : BOOTH_SEL_GEN
             booth_encoder booth_enc (
                 .bits({booth_b[2*i+2], booth_b[2*i+1], booth_b[2*i]}),
-                .sel(booth_sel[i])
+                .sel(booth_sel[3*i+2:3*i])
             );
         end
     endgenerate
 
     // Generate partial products with power gating
     integer j;
+    reg [15:0] temp_product;
     always @(*) begin
         if (power_gate) begin
-            for (j = 0; j < 8; j = j + 1)
-                partial_products[j] = 16'b0;
+            partial_products_flat = 128'b0;
         end else begin
             for (j = 0; j < 8; j = j + 1) begin
-                case (booth_sel[j])
-                    3'b000: partial_products[j] = 16'b0;  // +0
-                    3'b001: partial_products[j] = a;      // +1
-                    3'b010: partial_products[j] = a << 1; // +2
-                    3'b011: partial_products[j] = (a << 1) + a; // +3
-                    3'b100: partial_products[j] = -(a << 1) - a; // -3
-                    3'b101: partial_products[j] = -(a << 1); // -2
-                    3'b110: partial_products[j] = -a;     // -1
-                    3'b111: partial_products[j] = 16'b0;  // +0
+                case (booth_sel[3*j+2:3*j])
+                    3'b000: temp_product = 16'b0;  // +0
+                    3'b001: temp_product = a;      // +1
+                    3'b010: temp_product = a << 1; // +2
+                    3'b011: temp_product = (a << 1) + a; // +3
+                    3'b100: temp_product = -(a << 1) - a; // -3
+                    3'b101: temp_product = -(a << 1); // -2
+                    3'b110: temp_product = -a;     // -1
+                    3'b111: temp_product = 16'b0;  // +0
+                    default: temp_product = 16'b0;
                 endcase
+                partial_products_flat[16*j+15:16*j] = temp_product;
             end
         end
     end
@@ -82,14 +95,14 @@ module booth_array_16bit_optimized (
     // Wallace Tree reduction
     wire [31:0] wallace_out;
     wallace_tree wallace (
-        .pp0(partial_products[0]),
-        .pp1(partial_products[1]),
-        .pp2(partial_products[2]),
-        .pp3(partial_products[3]),
-        .pp4(partial_products[4]),
-        .pp5(partial_products[5]),
-        .pp6(partial_products[6]),
-        .pp7(partial_products[7]),
+        .pp0(pp0),
+        .pp1(pp1),
+        .pp2(pp2),
+        .pp3(pp3),
+        .pp4(pp4),
+        .pp5(pp5),
+        .pp6(pp6),
+        .pp7(pp7),
         .sum(wallace_out)
     );
 
@@ -146,6 +159,7 @@ module booth_encoder (
             3'b101: sel = 3'b110;  // -1
             3'b110: sel = 3'b110;  // -1
             3'b111: sel = 3'b000;  // 0
+            default: sel = 3'b000;
         endcase
     end
 endmodule
