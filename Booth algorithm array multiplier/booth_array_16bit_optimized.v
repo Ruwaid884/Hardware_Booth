@@ -28,6 +28,7 @@ module booth_array_16bit_optimized (
     reg [16:0] booth_b;  // Extended by 1 bit
     wire [23:0] booth_sel;  // 8 groups of 3-bit selection signals
     reg [127:0] partial_products_flat;  // 8 groups of 16-bit products flattened
+    reg [15:0] temp_product;  // Temporary register for partial product calculation
 
     // Easier access to individual partial products
     wire [15:0] pp0, pp1, pp2, pp3, pp4, pp5, pp6, pp7;
@@ -69,26 +70,114 @@ module booth_array_16bit_optimized (
     endgenerate
 
     // Generate partial products with power gating
-    integer j;
-    reg [15:0] temp_product;
     always @(*) begin
         if (power_gate) begin
             partial_products_flat = 128'b0;
         end else begin
-            for (j = 0; j < 8; j = j + 1) begin
-                case (booth_sel[3*j+2:3*j])
-                    3'b000: temp_product = 16'b0;  // +0
-                    3'b001: temp_product = a;      // +1
-                    3'b010: temp_product = a << 1; // +2
-                    3'b011: temp_product = (a << 1) + a; // +3
-                    3'b100: temp_product = -(a << 1) - a; // -3
-                    3'b101: temp_product = -(a << 1); // -2
-                    3'b110: temp_product = -a;     // -1
-                    3'b111: temp_product = 16'b0;  // +0
-                    default: temp_product = 16'b0;
-                endcase
-                partial_products_flat[16*j+15:16*j] = temp_product;
-            end
+            // Unrolled loop for partial products generation
+            case (booth_sel[2:0])  // First partial product
+                3'b000: temp_product = 16'b0;  // +0
+                3'b001: temp_product = a;      // +1
+                3'b010: temp_product = a << 1; // +2
+                3'b011: temp_product = (a << 1) + a; // +3
+                3'b100: temp_product = -(a << 1) - a; // -3
+                3'b101: temp_product = -(a << 1); // -2
+                3'b110: temp_product = -a;     // -1
+                3'b111: temp_product = 16'b0;  // +0
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[15:0] = temp_product;
+
+            case (booth_sel[5:3])  // Second partial product
+                3'b000: temp_product = 16'b0;
+                3'b001: temp_product = a;
+                3'b010: temp_product = a << 1;
+                3'b011: temp_product = (a << 1) + a;
+                3'b100: temp_product = -(a << 1) - a;
+                3'b101: temp_product = -(a << 1);
+                3'b110: temp_product = -a;
+                3'b111: temp_product = 16'b0;
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[31:16] = temp_product;
+
+            case (booth_sel[8:6])  // Third partial product
+                3'b000: temp_product = 16'b0;
+                3'b001: temp_product = a;
+                3'b010: temp_product = a << 1;
+                3'b011: temp_product = (a << 1) + a;
+                3'b100: temp_product = -(a << 1) - a;
+                3'b101: temp_product = -(a << 1);
+                3'b110: temp_product = -a;
+                3'b111: temp_product = 16'b0;
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[47:32] = temp_product;
+
+            case (booth_sel[11:9])  // Fourth partial product
+                3'b000: temp_product = 16'b0;
+                3'b001: temp_product = a;
+                3'b010: temp_product = a << 1;
+                3'b011: temp_product = (a << 1) + a;
+                3'b100: temp_product = -(a << 1) - a;
+                3'b101: temp_product = -(a << 1);
+                3'b110: temp_product = -a;
+                3'b111: temp_product = 16'b0;
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[63:48] = temp_product;
+
+            case (booth_sel[14:12])  // Fifth partial product
+                3'b000: temp_product = 16'b0;
+                3'b001: temp_product = a;
+                3'b010: temp_product = a << 1;
+                3'b011: temp_product = (a << 1) + a;
+                3'b100: temp_product = -(a << 1) - a;
+                3'b101: temp_product = -(a << 1);
+                3'b110: temp_product = -a;
+                3'b111: temp_product = 16'b0;
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[79:64] = temp_product;
+
+            case (booth_sel[17:15])  // Sixth partial product
+                3'b000: temp_product = 16'b0;
+                3'b001: temp_product = a;
+                3'b010: temp_product = a << 1;
+                3'b011: temp_product = (a << 1) + a;
+                3'b100: temp_product = -(a << 1) - a;
+                3'b101: temp_product = -(a << 1);
+                3'b110: temp_product = -a;
+                3'b111: temp_product = 16'b0;
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[95:80] = temp_product;
+
+            case (booth_sel[20:18])  // Seventh partial product
+                3'b000: temp_product = 16'b0;
+                3'b001: temp_product = a;
+                3'b010: temp_product = a << 1;
+                3'b011: temp_product = (a << 1) + a;
+                3'b100: temp_product = -(a << 1) - a;
+                3'b101: temp_product = -(a << 1);
+                3'b110: temp_product = -a;
+                3'b111: temp_product = 16'b0;
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[111:96] = temp_product;
+
+            case (booth_sel[23:21])  // Eighth partial product
+                3'b000: temp_product = 16'b0;
+                3'b001: temp_product = a;
+                3'b010: temp_product = a << 1;
+                3'b011: temp_product = (a << 1) + a;
+                3'b100: temp_product = -(a << 1) - a;
+                3'b101: temp_product = -(a << 1);
+                3'b110: temp_product = -a;
+                3'b111: temp_product = 16'b0;
+                default: temp_product = 16'b0;
+            endcase
+            partial_products_flat[127:112] = temp_product;
         end
     end
 
