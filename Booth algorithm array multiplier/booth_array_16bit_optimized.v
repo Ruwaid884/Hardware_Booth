@@ -26,8 +26,8 @@ module booth_array_16bit_optimized (
 
     // Modified Booth Encoding signals
     reg [16:0] booth_b;  // Extended by 1 bit
-    wire [7:0] booth_sel;  // Booth selection signals
-    reg [15:0] partial_products [7:0];  // 8 partial products instead of 16
+    wire [7:0][2:0] booth_sel;  // Booth selection signals
+    reg [7:0][15:0] partial_products;  // 8 partial products instead of 16
 
     // Pipeline registers
     reg [15:0] a_pipe, b_pipe;
@@ -58,12 +58,13 @@ module booth_array_16bit_optimized (
     endgenerate
 
     // Generate partial products with power gating
+    integer j;
     always @(*) begin
         if (power_gate) begin
-            for (integer j = 0; j < 8; j = j + 1)
+            for (j = 0; j < 8; j = j + 1)
                 partial_products[j] = 16'b0;
         end else begin
-            for (integer j = 0; j < 8; j = j + 1) begin
+            for (j = 0; j < 8; j = j + 1) begin
                 case (booth_sel[j])
                     3'b000: partial_products[j] = 16'b0;  // +0
                     3'b001: partial_products[j] = a;      // +1
@@ -81,7 +82,14 @@ module booth_array_16bit_optimized (
     // Wallace Tree reduction
     wire [31:0] wallace_out;
     wallace_tree wallace (
-        .partial_products(partial_products),
+        .pp0(partial_products[0]),
+        .pp1(partial_products[1]),
+        .pp2(partial_products[2]),
+        .pp3(partial_products[3]),
+        .pp4(partial_products[4]),
+        .pp5(partial_products[5]),
+        .pp6(partial_products[6]),
+        .pp7(partial_products[7]),
         .sum(wallace_out)
     );
 
@@ -144,29 +152,36 @@ endmodule
 
 // Wallace Tree for partial product reduction
 module wallace_tree (
-    input wire [15:0] partial_products [7:0],
+    input wire [15:0] pp0,
+    input wire [15:0] pp1,
+    input wire [15:0] pp2,
+    input wire [15:0] pp3,
+    input wire [15:0] pp4,
+    input wire [15:0] pp5,
+    input wire [15:0] pp6,
+    input wire [15:0] pp7,
     output wire [31:0] sum
 );
     // Level 1: Reduce 8 partial products to 6
     wire [31:0] l1_sum [5:0];
     wallace_csa #(32) csa_l1_1 (
-        .a({16'b0, partial_products[0]}),
-        .b({15'b0, partial_products[1], 1'b0}),
-        .c({14'b0, partial_products[2], 2'b0}),
+        .a({16'b0, pp0}),
+        .b({15'b0, pp1, 1'b0}),
+        .c({14'b0, pp2, 2'b0}),
         .sum(l1_sum[0]),
         .carry(l1_sum[1])
     );
     
     wallace_csa #(32) csa_l1_2 (
-        .a({13'b0, partial_products[3], 3'b0}),
-        .b({12'b0, partial_products[4], 4'b0}),
-        .c({11'b0, partial_products[5], 5'b0}),
+        .a({13'b0, pp3, 3'b0}),
+        .b({12'b0, pp4, 4'b0}),
+        .c({11'b0, pp5, 5'b0}),
         .sum(l1_sum[2]),
         .carry(l1_sum[3])
     );
     
-    assign l1_sum[4] = {10'b0, partial_products[6], 6'b0};
-    assign l1_sum[5] = {9'b0, partial_products[7], 7'b0};
+    assign l1_sum[4] = {10'b0, pp6, 6'b0};
+    assign l1_sum[5] = {9'b0, pp7, 7'b0};
 
     // Level 2: Reduce 6 operands to 4
     wire [31:0] l2_sum [3:0];
