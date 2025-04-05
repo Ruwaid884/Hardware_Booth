@@ -74,8 +74,8 @@ module booth_array_16bit_optimized (
         if (power_gate) begin
             partial_products_flat = 128'b0;
         end else begin
-            // Unrolled loop for partial products generation
-            case (booth_sel[2:0])  // First partial product
+            // First partial product
+            case (booth_sel[2:0])
                 3'b000: temp_product = 16'b0;  // +0
                 3'b001: temp_product = a;      // +1
                 3'b010: temp_product = a << 1; // +2
@@ -88,7 +88,8 @@ module booth_array_16bit_optimized (
             endcase
             partial_products_flat[15:0] = temp_product;
 
-            case (booth_sel[5:3])  // Second partial product
+            // Second partial product (shifted by 2)
+            case (booth_sel[5:3])
                 3'b000: temp_product = 16'b0;
                 3'b001: temp_product = a;
                 3'b010: temp_product = a << 1;
@@ -101,7 +102,8 @@ module booth_array_16bit_optimized (
             endcase
             partial_products_flat[31:16] = temp_product;
 
-            case (booth_sel[8:6])  // Third partial product
+            // Third partial product (shifted by 4)
+            case (booth_sel[8:6])
                 3'b000: temp_product = 16'b0;
                 3'b001: temp_product = a;
                 3'b010: temp_product = a << 1;
@@ -114,7 +116,8 @@ module booth_array_16bit_optimized (
             endcase
             partial_products_flat[47:32] = temp_product;
 
-            case (booth_sel[11:9])  // Fourth partial product
+            // Fourth partial product (shifted by 6)
+            case (booth_sel[11:9])
                 3'b000: temp_product = 16'b0;
                 3'b001: temp_product = a;
                 3'b010: temp_product = a << 1;
@@ -127,7 +130,8 @@ module booth_array_16bit_optimized (
             endcase
             partial_products_flat[63:48] = temp_product;
 
-            case (booth_sel[14:12])  // Fifth partial product
+            // Fifth partial product (shifted by 8)
+            case (booth_sel[14:12])
                 3'b000: temp_product = 16'b0;
                 3'b001: temp_product = a;
                 3'b010: temp_product = a << 1;
@@ -140,7 +144,8 @@ module booth_array_16bit_optimized (
             endcase
             partial_products_flat[79:64] = temp_product;
 
-            case (booth_sel[17:15])  // Sixth partial product
+            // Sixth partial product (shifted by 10)
+            case (booth_sel[17:15])
                 3'b000: temp_product = 16'b0;
                 3'b001: temp_product = a;
                 3'b010: temp_product = a << 1;
@@ -153,7 +158,8 @@ module booth_array_16bit_optimized (
             endcase
             partial_products_flat[95:80] = temp_product;
 
-            case (booth_sel[20:18])  // Seventh partial product
+            // Seventh partial product (shifted by 12)
+            case (booth_sel[20:18])
                 3'b000: temp_product = 16'b0;
                 3'b001: temp_product = a;
                 3'b010: temp_product = a << 1;
@@ -166,7 +172,8 @@ module booth_array_16bit_optimized (
             endcase
             partial_products_flat[111:96] = temp_product;
 
-            case (booth_sel[23:21])  // Eighth partial product
+            // Eighth partial product (shifted by 14)
+            case (booth_sel[23:21])
                 3'b000: temp_product = 16'b0;
                 3'b001: temp_product = a;
                 3'b010: temp_product = a << 1;
@@ -267,24 +274,28 @@ module wallace_tree (
 );
     // Level 1: Reduce 8 partial products to 6
     wire [31:0] l1_sum [5:0];
+    
+    // First group with proper shifts
     wallace_csa #(32) csa_l1_1 (
         .a({16'b0, pp0}),
-        .b({15'b0, pp1, 1'b0}),
-        .c({14'b0, pp2, 2'b0}),
+        .b({14'b0, pp1, 2'b0}),
+        .c({12'b0, pp2, 4'b0}),
         .sum(l1_sum[0]),
         .carry(l1_sum[1])
     );
     
+    // Second group with proper shifts
     wallace_csa #(32) csa_l1_2 (
-        .a({13'b0, pp3, 3'b0}),
-        .b({12'b0, pp4, 4'b0}),
-        .c({11'b0, pp5, 5'b0}),
+        .a({10'b0, pp3, 6'b0}),
+        .b({8'b0, pp4, 8'b0}),
+        .c({6'b0, pp5, 10'b0}),
         .sum(l1_sum[2]),
         .carry(l1_sum[3])
     );
     
-    assign l1_sum[4] = {10'b0, pp6, 6'b0};
-    assign l1_sum[5] = {9'b0, pp7, 7'b0};
+    // Remaining products with proper shifts
+    assign l1_sum[4] = {4'b0, pp6, 12'b0};
+    assign l1_sum[5] = {2'b0, pp7, 14'b0};
 
     // Level 2: Reduce 6 operands to 4
     wire [31:0] l2_sum [3:0];
