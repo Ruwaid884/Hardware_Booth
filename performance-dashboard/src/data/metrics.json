@@ -1,0 +1,56 @@
+{
+  "8-bit Booth Signed": {
+    "area": 1200,
+    "power": 1.2,
+    "delay": 3.5,
+    "throughput": 285,
+    "synthesis_report": "8-bit modified booth multiplier with CLA_ripple adder/synthesis_report.txt",
+    "simulation_results": "8-bit modified booth multiplier with CLA_ripple adder/simulation_results.txt",
+    "rtl_code": "8-bit modified booth multiplier with CLA_ripple adder/multiplier.v"
+  },
+  "8-bit Booth Unsigned": {
+    "area": 1100,
+    "power": 1.1,
+    "delay": 3.2,
+    "throughput": 312,
+    "synthesis_report": "8-bit unsigned modified booth multiplier with CLA_ripple adder/synthesis_report.txt",
+    "simulation_results": "8-bit unsigned modified booth multiplier with CLA_ripple adder/simulation_results.txt",
+    "rtl_code": "8-bit unsigned modified booth multiplier with CLA_ripple adder/multiplier.v"
+  },
+  "16-bit Wallace Tree Signed": {
+    "area": 4500,
+    "power": 4.2,
+    "delay": 5.8,
+    "throughput": 172,
+    "synthesis_report": "16-bit signed multiplier using wallace tree/synthesis_report.txt",
+    "simulation_results": "16-bit signed multiplier using wallace tree/simulation_results.txt",
+    "rtl_code": "16-bit signed multiplier using wallace tree/multiplier.v"
+  },
+  "16-bit Wallace Tree Unsigned": {
+    "area": 4200,
+    "power": 4.0,
+    "delay": 5.5,
+    "throughput": 181,
+    "synthesis_report": "16-bit unsigned multiplier using wallace tree/synthesis_report.txt",
+    "simulation_results": "16-bit unsigned multiplier using wallace tree/simulation_results.txt",
+    "rtl_code": "16-bit unsigned multiplier using wallace tree/multiplier.v"
+  },
+  "16-bit Array Signed": {
+    "area": 3800,
+    "power": 3.8,
+    "delay": 6.2,
+    "throughput": 161,
+    "synthesis_report": "Booth algorithm array multiplier/synthesis_report.txt",
+    "simulation_results": "Booth algorithm array multiplier/simulation_results.txt",
+    "rtl_code": "Booth algorithm array multiplier/multiplier.v"
+  },
+  "16-bit Array Unsigned": {
+    "area": 3500,
+    "power": 3.5,
+    "delay": 6.0,
+    "throughput": 166,
+    "synthesis_report": "Array multiplier for unsigned nos/synthesis_report.txt",
+    "simulation_results": "Array multiplier for unsigned nos/simulation_results.txt",
+    "rtl_code": "Array multiplier for unsigned nos/multiplier.v"
+  }
+} 
